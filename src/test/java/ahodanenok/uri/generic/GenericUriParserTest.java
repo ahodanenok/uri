@@ -12,4 +12,12 @@ public class GenericUriParserTest {
         GenericUri uri = parser.parse("foo://example.com:8042/over/there?name=ferret#nose");
         assertEquals("foo", uri.getScheme());
     }
+
+    @Test
+    public void testParseSchemeEmptyPath() {
+        GenericUriParser parser = new GenericUriParser();
+        GenericUri uri = parser.parse("test:");
+        assertEquals("test", uri.getScheme());
+        assertEquals("", uri.getPath());
+    }
 }
