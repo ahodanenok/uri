@@ -46,8 +46,16 @@ public final class GenericUriParser implements UriParser<GenericUri> {
         if (peek(state) == '/') {
             return new HierarchyPart(null, null, null, "1"); // todo: impl
         } else if (isPathChar(state)) {
-            return new HierarchyPart(null, null, null, "2"); // todo: impl
+            // path-rootless
+            readSegmentToBuffer(state);
+            while (peek(state) == '/') {
+                state.buf.append((char) read(state));
+                readSegmentToBuffer(state);
+            }
+
+            return new HierarchyPart(null, null, null, state.bufToString());
         } else {
+            // path-empty
             return new HierarchyPart(null, null, null, "");
         }
     }
@@ -76,6 +84,57 @@ public final class GenericUriParser implements UriParser<GenericUri> {
 //                     ; non-zero-length segment without any colon ":"
 
 //       pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
+
+    private void readSegmentToBuffer(ParseState state) {
+        while (isPathChar(state)) {
+            state.buf.append((char) readPathChar(state));
+        }
+    }
+
+    private int readPathChar(ParseState state) {
+        if (peek(state) == '%') {
+            return readPercentEncodedChar(state);
+        } else {
+            return read(state);
+        }
+    }
+
+    private int readPercentEncodedChar(ParseState state) {
+        read(state); // skip %
+        int h1 = readHexDigit(state);
+        if (h1 == -1) {
+            return -1;
+        }
+
+        int h2 = readHexDigit(state);
+        if (h2 == -1) {
+            return -1;
+        }
+
+        return (char) ((h1 << 4) | h2);
+    }
+
+    private int readHexDigit(ParseState state) {
+        return switch (read(state)) {
+            case '0' -> 0;
+            case '1' -> 1;
+            case '2' -> 2;
+            case '3' -> 3;
+            case '4' -> 4;
+            case '5' -> 5;
+            case '6' -> 6;
+            case '7' -> 7;
+            case '8' -> 8;
+            case '9' -> 9;
+            case 'A' -> 10;
+            case 'B' -> 11;
+            case 'C' -> 12;
+            case 'D' -> 13;
+            case 'E' -> 14;
+            case 'F' -> 15;
+            default -> throw new UriParseException("not a hex digit");
+        };
+    }
 
     private int peek(ParseState state) {
         return peek(0, state);
@@ -161,10 +220,18 @@ public final class GenericUriParser implements UriParser<GenericUri> {
 
         private final String input;
         private int position;
+        private StringBuilder buf;
 
         ParseState(String input) {
             this.input = input;
             this.position = 0;
+            this.buf = new StringBuilder();
+        }
+
+        String bufToString() {
+            String s = buf.toString();
+            buf.setLength(0);
+            return s;
         }
     }
 
