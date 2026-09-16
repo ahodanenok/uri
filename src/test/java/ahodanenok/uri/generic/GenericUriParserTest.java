@@ -52,4 +52,36 @@ public class GenericUriParserTest {
         assertEquals("data", uri.getScheme());
         assertEquals("a///b////", uri.getPath());
     }
+
+    @Test
+    public void testParseSchemeAbsolutePath_NoSegments() {
+        GenericUriParser parser = new GenericUriParser();
+        GenericUri uri = parser.parse("xyz:/");
+        assertEquals("xyz", uri.getScheme());
+        assertEquals("/", uri.getPath());
+    }
+
+    @Test
+    public void testParseSchemeAbsolutePath_OneSegment() {
+        GenericUriParser parser = new GenericUriParser();
+        GenericUri uri = parser.parse("xyz:/foo");
+        assertEquals("xyz", uri.getScheme());
+        assertEquals("/foo", uri.getPath());
+    }
+
+    @Test
+    public void testParseSchemeAbsolutePath_MultipleSegments() {
+        GenericUriParser parser = new GenericUriParser();
+        GenericUri uri = parser.parse("xyz:/foo/bar/123");
+        assertEquals("xyz", uri.getScheme());
+        assertEquals("/foo/bar/123", uri.getPath());
+    }
+
+    @Test
+    public void testParseSchemeAbsolutePath_MultipleSegmentsWithEmptySegments() {
+        GenericUriParser parser = new GenericUriParser();
+        GenericUri uri = parser.parse("xyz:/foo///bar");
+        assertEquals("xyz", uri.getScheme());
+        assertEquals("/foo///bar", uri.getPath());
+    }
 }

@@ -44,7 +44,22 @@ public final class GenericUriParser implements UriParser<GenericUri> {
 
     private HierarchyPart readHierarchyPart(ParseState state) {
         if (peek(state) == '/') {
-            return new HierarchyPart(null, null, null, "1"); // todo: impl
+            read(state); // skip /
+            if (peek(state) == '/') {
+                return new HierarchyPart(null, null, null, "1"); // todo: impl
+            } else {
+                // path-absolute
+                state.buf.append('/');
+                if (isPathChar(state)) {
+                    readSegmentToBuffer(state);
+                    while (peek(state) == '/') {
+                        state.buf.append((char) read(state));
+                        readSegmentToBuffer(state);
+                    }
+                }
+
+                return new HierarchyPart(null, null, null, state.bufToString());
+            }
         } else if (isPathChar(state)) {
             // path-rootless
             readSegmentToBuffer(state);
