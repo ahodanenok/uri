@@ -14,7 +14,10 @@ public final class GenericUriParser implements UriParser<GenericUri> {
         HierarchyPart hierarchyPart = readHierarchyPart(state);
 
 
-        return new GenericUri(scheme, hierarchyPart.path());
+        return new GenericUri(
+            scheme,
+            hierarchyPart.host(),
+            hierarchyPart.path());
     }
 
     // scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
@@ -46,7 +49,45 @@ public final class GenericUriParser implements UriParser<GenericUri> {
         if (peek(state) == '/') {
             read(state); // skip /
             if (peek(state) == '/') {
-                return new HierarchyPart(null, null, null, "1"); // todo: impl
+                read(state); // skip /
+                // authority   = [ userinfo "@" ] host [ ":" port ]
+                // userinfo    = *( unreserved / pct-encoded / sub-delims / ":" )
+                // host        = IP-literal / IPv4address / reg-name
+                String host = readHost(state);
+                // IP-literal  = "[" ( IPv6address / IPvFuture  ) "]"
+                // IPvFuture   = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
+                // IPv6address = 6( h16 ":" ) ls32
+                //   /                       "::" 5( h16 ":" ) ls32
+                //   / [               h16 ] "::" 4( h16 ":" ) ls32
+                //   / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32
+                //   / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32
+                //   / [ *3( h16 ":" ) h16 ] "::"    h16 ":"   ls32
+                //   / [ *4( h16 ":" ) h16 ] "::"              ls32
+                //   / [ *5( h16 ":" ) h16 ] "::"              h16
+                //   / [ *6( h16 ":" ) h16 ] "::"
+
+                // ls32        = ( h16 ":" h16 ) / IPv4address
+                //               ; least-significant 32 bits of address
+
+                // h16         = 1*4HEXDIG
+                //               ; 16 bits of address represented in hexadecimal
+                // IPv4address = dec-octet "." dec-octet "." dec-octet "." dec-octet
+
+                // dec-octet   = DIGIT                 ; 0-9
+                //               / %x31-39 DIGIT         ; 10-99
+                //               / "1" 2DIGIT            ; 100-199
+                //               / "2" %x30-34 DIGIT     ; 200-249
+                //               / "25" %x30-35          ; 250-255
+                // reg-name    = *( unreserved / pct-encoded / sub-delims )
+                // port        = *DIGIT
+
+                // path-abempty
+                 while (peek(state) == '/') {
+                    state.buf.append((char) read(state));
+                    readSegmentToBuffer(state);
+                }
+
+                return new HierarchyPart(null, host, null, state.bufToString());
             } else {
                 // path-absolute
                 state.buf.append('/');
@@ -99,6 +140,105 @@ public final class GenericUriParser implements UriParser<GenericUri> {
 //                     ; non-zero-length segment without any colon ":"
 
 //       pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
+
+    // host = IP-literal / IPv4address / reg-name
+    private String readHost(ParseState state) {
+        int ch = peek(state);
+        if (ch == -1) {
+            throw new UriParseException("host missing");
+        }
+
+        if (ch == '[') {
+            // todo: impl
+            return null;
+        }
+        if (ch == 'v') {
+            // todo: impl
+            return null;
+        }
+
+        String ip4 = readIpAddressV4(state);
+        if (ip4 != null) {
+            return ip4;
+        }
+
+        String regName = readRegName(state);
+        if (regName != null) {
+            return regName;
+        }
+
+        throw new UriParseException("host missing");
+    }
+
+    private String readIpAddressV4(ParseState state) {
+        // IPv4address = dec-octet "." dec-octet "." dec-octet "." dec-octet
+        state.mark();
+        boolean read = matchDecimalOctetBuf(state)
+            && matchBuf('.', state)
+            && matchDecimalOctetBuf(state)
+            && matchBuf('.', state)
+            && matchDecimalOctetBuf(state)
+            && matchBuf('.', state)
+            && matchDecimalOctetBuf(state);
+        if (!read) {
+            state.rewind();
+            return null;
+        }
+
+        return state.bufToString();
+    }
+
+    private boolean matchBuf(char ch, ParseState state) {
+        if (peek(state) == ch) {
+            read(state);
+            state.buf.append(ch);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private String readRegName(ParseState state) {
+        return null; // todo: impl
+    }
+
+    // dec-octet = DIGIT                   ; 0-9
+    //             / %x31-39 DIGIT         ; 10-99
+    //             / "1" 2DIGIT            ; 100-199
+    //             / "2" %x30-34 DIGIT     ; 200-249
+    //             / "25" %x30-35          ; 250-255
+    private boolean matchDecimalOctetBuf(ParseState state) {
+        int ch1 = peek(0, state);
+        int ch2 = peek(1, state);
+        int ch3 = peek(2, state);
+        if (ch1 == '2') {
+            if (ch2 == '5' && ch3 >= '0' && ch3 <= '5') {
+                state.buf.append((char) read(state));
+                state.buf.append((char) read(state));
+                state.buf.append((char) read(state));
+                return true;
+            } else if (ch2 >= '0' && ch2 <= '4' && isDigit(ch3)) {
+                state.buf.append((char) read(state));
+                state.buf.append((char) read(state));
+                state.buf.append((char) read(state));
+                return true;
+            }
+        } else if (ch1 == '1' && isDigit(ch2) && isDigit(ch3)) {
+            state.buf.append((char) read(state));
+            state.buf.append((char) read(state));
+            state.buf.append((char) read(state));
+            return true;
+        } else if (ch1 >= '1' && ch1 <= '9' && isDigit(ch2)) {
+            state.buf.append((char) read(state));
+            state.buf.append((char) read(state));
+            return true;
+        } else if (isDigit(ch1)) {
+            state.buf.append((char) read(state));
+            return true;
+        }
+
+        return false;
+    }
 
     private void readSegmentToBuffer(ParseState state) {
         while (isPathChar(state)) {
@@ -237,6 +377,9 @@ public final class GenericUriParser implements UriParser<GenericUri> {
         private int position;
         private StringBuilder buf;
 
+        private int markPosition = -1;
+        private int markBufLength = -1;
+
         ParseState(String input) {
             this.input = input;
             this.position = 0;
@@ -247,6 +390,18 @@ public final class GenericUriParser implements UriParser<GenericUri> {
             String s = buf.toString();
             buf.setLength(0);
             return s;
+        }
+
+        void mark() {
+            markPosition = position;
+            markBufLength = buf.length();
+        }
+
+        void rewind() {
+            position = markPosition;
+            markPosition = -1;
+            buf.setLength(markBufLength);
+            markBufLength = -1;
         }
     }
 

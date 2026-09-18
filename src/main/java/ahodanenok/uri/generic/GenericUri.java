@@ -5,17 +5,24 @@ import ahodanenok.uri.Uri;
 public final class GenericUri implements Uri {
 
     private final String scheme;
+    private final String host;
     private final String path;
 
     // todo: how to create an uri from components with validation?
-    public GenericUri(String scheme, String path) {
+    public GenericUri(String scheme, String host, String path) {
         this.scheme = scheme;
+        this.host = host;
         this.path = path;
     }
 
     @Override
     public String getScheme() {
         return scheme;
+    }
+
+    @Override
+    public String getHost() {
+        return host;
     }
 
     @Override
