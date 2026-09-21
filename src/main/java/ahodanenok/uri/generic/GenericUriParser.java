@@ -1,5 +1,6 @@
 package ahodanenok.uri.generic;
 
+import ahodanenok.uri.Uri.HostType;
 import ahodanenok.uri.UriParser;
 import ahodanenok.uri.UriParseException;
 
@@ -12,11 +13,13 @@ public final class GenericUriParser implements UriParser<GenericUri> {
         String scheme = readScheme(state);
         expect(':', state);
         HierarchyPart hierarchyPart = readHierarchyPart(state);
+        Host host = hierarchyPart.host();
 
 
         return new GenericUri(
             scheme,
-            hierarchyPart.host(),
+            host != null ? host.type() : null,
+            host != null ? host.value() : null,
             hierarchyPart.path());
     }
 
@@ -45,56 +48,37 @@ public final class GenericUriParser implements UriParser<GenericUri> {
         return scheme;
     }
 
+    //  hier-part  = "//" authority path-abempty
+    //               / path-absolute
+    //               / path-rootless
+    //               / path-empty
     private HierarchyPart readHierarchyPart(ParseState state) {
-        if (peek(state) == '/') {
-            read(state); // skip /
-            if (peek(state) == '/') {
-                read(state); // skip /
+        if (peek(0, state) == '/') {
+            if (peek(1, state) == '/') {
                 // authority   = [ userinfo "@" ] host [ ":" port ]
+                read(state); // skip /
+                read(state); // skip /
+
                 // userinfo    = *( unreserved / pct-encoded / sub-delims / ":" )
-                // host        = IP-literal / IPv4address / reg-name
-                String host = readHost(state);
-                // IP-literal  = "[" ( IPv6address / IPvFuture  ) "]"
-                // IPvFuture   = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
-                // IPv6address = 6( h16 ":" ) ls32
-                //   /                       "::" 5( h16 ":" ) ls32
-                //   / [               h16 ] "::" 4( h16 ":" ) ls32
-                //   / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32
-                //   / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32
-                //   / [ *3( h16 ":" ) h16 ] "::"    h16 ":"   ls32
-                //   / [ *4( h16 ":" ) h16 ] "::"              ls32
-                //   / [ *5( h16 ":" ) h16 ] "::"              h16
-                //   / [ *6( h16 ":" ) h16 ] "::"
 
-                // ls32        = ( h16 ":" h16 ) / IPv4address
-                //               ; least-significant 32 bits of address
+                Host host = readHost(state);
 
-                // h16         = 1*4HEXDIG
-                //               ; 16 bits of address represented in hexadecimal
-                // IPv4address = dec-octet "." dec-octet "." dec-octet "." dec-octet
-
-                // dec-octet   = DIGIT                 ; 0-9
-                //               / %x31-39 DIGIT         ; 10-99
-                //               / "1" 2DIGIT            ; 100-199
-                //               / "2" %x30-34 DIGIT     ; 200-249
-                //               / "25" %x30-35          ; 250-255
-                // reg-name    = *( unreserved / pct-encoded / sub-delims )
                 // port        = *DIGIT
 
                 // path-abempty
-                 while (peek(state) == '/') {
-                    state.buf.append((char) read(state));
+                while (peek(state) == '/') {
+                    readBuf(state);
                     readSegmentToBuffer(state);
                 }
 
                 return new HierarchyPart(null, host, null, state.bufToString());
             } else {
                 // path-absolute
-                state.buf.append('/');
+                readBuf(state);
                 if (isPathChar(state)) {
                     readSegmentToBuffer(state);
                     while (peek(state) == '/') {
-                        state.buf.append((char) read(state));
+                        readBuf(state);
                         readSegmentToBuffer(state);
                     }
                 }
@@ -105,7 +89,7 @@ public final class GenericUriParser implements UriParser<GenericUri> {
             // path-rootless
             readSegmentToBuffer(state);
             while (peek(state) == '/') {
-                state.buf.append((char) read(state));
+                readBuf(state);
                 readSegmentToBuffer(state);
             }
 
@@ -116,63 +100,149 @@ public final class GenericUriParser implements UriParser<GenericUri> {
         }
     }
 
-    // URI         = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
-
-    //   hier-part   = "//" authority path-abempty
-    //               / path-absolute
-    //               / path-rootless
-    //               / path-empty
-
-// path          = path-abempty    ; begins with "/" or is empty
-//                     / path-absolute   ; begins with "/" but not "//"
-//                     / path-noscheme   ; begins with a non-colon segment
-//                     / path-rootless   ; begins with a segment
-//                     / path-empty      ; zero characters
-
-//       path-abempty  = *( "/" segment )
-//       path-absolute = "/" [ segment-nz *( "/" segment ) ]
-//       path-noscheme = segment-nz-nc *( "/" segment )
-//       path-rootless = segment-nz *( "/" segment )
-//       path-empty    = 0<pchar>
-// segment       = *pchar
-//       segment-nz    = 1*pchar
-//       segment-nz-nc = 1*( unreserved / pct-encoded / sub-delims / "@" )
-//                     ; non-zero-length segment without any colon ":"
-
-//       pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
-
     // host = IP-literal / IPv4address / reg-name
-    private String readHost(ParseState state) {
+    private Host readHost(ParseState state) {
         int ch = peek(state);
         if (ch == -1) {
-            throw new UriParseException("host missing");
+            return new Host(HostType.REGISTERED_NAME, "");
         }
 
+        // IP-literal  = "[" ( IPv6address / IPvFuture  ) "]"
         if (ch == '[') {
-            // todo: impl
-            return null;
-        }
-        if (ch == 'v') {
-            // todo: impl
-            return null;
+            read(state); // skip [
+            state.mark();
+            Host ip6 = readIpAddressV6(state);
+            if (ip6 != null) {
+                expect(']', state);
+                return ip6;
+            }
+            ch = peek(state);
+            if (ch != 'v' && ch != 'V') {
+                state.rewind();
+                throw new UriParseException("illegal IPv6 address");
+            }
+
+
+            Host ipv;
+            try {
+                ipv = readIpAddressFuture(state);
+            } catch (UriParseException e) {
+                state.rewind();
+                throw e;
+            }
+            expect(']', state);
+            return ipv;
         }
 
-        String ip4 = readIpAddressV4(state);
+        state.mark();
+        Host ip4 = readIpAddressV4(state);
         if (ip4 != null) {
             return ip4;
+        } else {
+            state.rewind();
         }
 
-        String regName = readRegName(state);
-        if (regName != null) {
-            return regName;
-        }
-
-        throw new UriParseException("host missing");
+        return readRegisteredName(state);
     }
 
-    private String readIpAddressV4(ParseState state) {
-        // IPv4address = dec-octet "." dec-octet "." dec-octet "." dec-octet
-        state.mark();
+    // IPvFuture   = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
+    private Host readIpAddressFuture(ParseState state) {
+        int ch;
+
+        ch = peek(state);
+        if (ch == 'v' || ch == 'V') {
+            readBuf(state);
+        } else {
+            throw new UriParseException("illegal IPvFuture address");
+        }
+
+        if (!isHexDigit(peek(state))) {
+            throw new UriParseException("illegal IPvFuture address");
+        }
+        readBuf(state);
+        expectBuf('.', state);
+
+        ch = peek(state);
+        if (!isUnreserved(ch) && !isSubDelimiter(ch) && ch != ':') {
+            throw new UriParseException("illegal IPvFuture address");
+        }
+        readBuf(state);
+        while (true) {
+            ch = peek(state);
+            if (isUnreserved(ch) || isSubDelimiter(ch) || ch == ':') {
+                readBuf(state);
+            } else {
+                break;
+            }
+        }
+
+        return new Host(HostType.IP_V, state.bufToString());
+    }
+
+    // IPv6address =                  6( h16 ":" ) ls32
+    //   /                       "::" 5( h16 ":" ) ls32
+    //   / [               h16 ] "::" 4( h16 ":" ) ls32
+    //   / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32
+    //   / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32
+    //   / [ *3( h16 ":" ) h16 ] "::"    h16 ":"   ls32
+    //   / [ *4( h16 ":" ) h16 ] "::"              ls32
+    //   / [ *5( h16 ":" ) h16 ] "::"              h16
+    //   / [ *6( h16 ":" ) h16 ] "::"
+    private Host readIpAddressV6(ParseState state) {
+        // todo: support all ip6 formats
+        boolean read = matchIpAddressV6Buf_h16(state)
+            && matchBuf(':', state)
+            && matchIpAddressV6Buf_h16(state)
+            && matchBuf(':', state)
+            && matchIpAddressV6Buf_h16(state)
+            && matchBuf(':', state)
+            && matchIpAddressV6Buf_h16(state)
+            && matchBuf(':', state)
+            && matchIpAddressV6Buf_h16(state)
+            && matchBuf(':', state)
+            && matchIpAddressV6Buf_h16(state)
+            && matchBuf(':', state)
+            && matchIpAddressV6Buf_h16(state)
+            && matchBuf(':', state)
+            && matchIpAddressV6Buf_h16(state);
+        if (!read) {
+            return null;
+        }
+
+        return new Host(HostType.IP_6, state.bufToString());
+    }
+
+    // h16  = 1*4HEXDIG
+    //        ; 16 bits of address represented in hexadecimal
+    private boolean matchIpAddressV6Buf_h16(ParseState state) {
+        if (isHexDigit(peek(state))) {
+            readBuf(state);
+            if (isHexDigit(peek(state))) {
+                readBuf(state);
+                if (isHexDigit(peek(state))) {
+                    readBuf(state);
+                    if (isHexDigit(peek(state))) {
+                        readBuf(state);
+                    }
+                }
+            }
+
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    // ls32        = ( h16 ":" h16 ) / IPv4address
+    //               ; least-significant 32 bits of address
+    private boolean matchIpAddressV6Buf_ls32(ParseState state) {
+        // todo: impl
+        return false;
+    }
+
+
+    // IPv4address = dec-octet "." dec-octet "." dec-octet "." dec-octet
+    private Host readIpAddressV4(ParseState state) {
         boolean read = matchDecimalOctetBuf(state)
             && matchBuf('.', state)
             && matchDecimalOctetBuf(state)
@@ -181,25 +251,30 @@ public final class GenericUriParser implements UriParser<GenericUri> {
             && matchBuf('.', state)
             && matchDecimalOctetBuf(state);
         if (!read) {
-            state.rewind();
             return null;
         }
 
-        return state.bufToString();
+        return new Host(HostType.IP_4, state.bufToString());
     }
 
-    private boolean matchBuf(char ch, ParseState state) {
-        if (peek(state) == ch) {
-            read(state);
-            state.buf.append(ch);
-            return true;
-        } else {
-            return false;
+    // reg-name = *( unreserved / pct-encoded / sub-delims )
+    private Host readRegisteredName(ParseState state) {
+        while (true) {
+            int ch = peek(state);
+            if (isUnreserved(ch) || isSubDelimiter(ch)) {
+                readBuf(state);
+            } else if (isPercentEncoded(state)) {
+                readPercentEncodedCharBuf(state);
+            } else {
+                break;
+            }
         }
-    }
 
-    private String readRegName(ParseState state) {
-        return null; // todo: impl
+        if (state.buf.length() == 0) {
+            return new Host(HostType.REGISTERED_NAME, "");
+        }
+
+        return new Host(HostType.REGISTERED_NAME, state.bufToString());
     }
 
     // dec-octet = DIGIT                   ; 0-9
@@ -213,27 +288,27 @@ public final class GenericUriParser implements UriParser<GenericUri> {
         int ch3 = peek(2, state);
         if (ch1 == '2') {
             if (ch2 == '5' && ch3 >= '0' && ch3 <= '5') {
-                state.buf.append((char) read(state));
-                state.buf.append((char) read(state));
-                state.buf.append((char) read(state));
+                readBuf(state);
+                readBuf(state);
+                readBuf(state);
                 return true;
             } else if (ch2 >= '0' && ch2 <= '4' && isDigit(ch3)) {
-                state.buf.append((char) read(state));
-                state.buf.append((char) read(state));
-                state.buf.append((char) read(state));
+                readBuf(state);
+                readBuf(state);
+                readBuf(state);
                 return true;
             }
         } else if (ch1 == '1' && isDigit(ch2) && isDigit(ch3)) {
-            state.buf.append((char) read(state));
-            state.buf.append((char) read(state));
-            state.buf.append((char) read(state));
+            readBuf(state);
+            readBuf(state);
+            readBuf(state);
             return true;
         } else if (ch1 >= '1' && ch1 <= '9' && isDigit(ch2)) {
-            state.buf.append((char) read(state));
-            state.buf.append((char) read(state));
+            readBuf(state);
+            readBuf(state);
             return true;
         } else if (isDigit(ch1)) {
-            state.buf.append((char) read(state));
+            readBuf(state);
             return true;
         }
 
@@ -242,31 +317,32 @@ public final class GenericUriParser implements UriParser<GenericUri> {
 
     private void readSegmentToBuffer(ParseState state) {
         while (isPathChar(state)) {
-            state.buf.append((char) readPathChar(state));
+            readPathCharBuf(state);
         }
     }
 
-    private int readPathChar(ParseState state) {
+    private void readPathCharBuf(ParseState state) {
         if (peek(state) == '%') {
-            return readPercentEncodedChar(state);
+            readPercentEncodedCharBuf(state);
         } else {
-            return read(state);
+            readBuf(state);
         }
     }
 
-    private int readPercentEncodedChar(ParseState state) {
-        read(state); // skip %
+    // todo: utf8
+    private void readPercentEncodedCharBuf(ParseState state) {
+        expect('%', state);
         int h1 = readHexDigit(state);
         if (h1 == -1) {
-            return -1;
+            return; // todo: error?
         }
 
         int h2 = readHexDigit(state);
         if (h2 == -1) {
-            return -1;
+            return; // todo: error?
         }
 
-        return (char) ((h1 << 4) | h2);
+        state.buf.append((char) ((h1 << 4) | h2));
     }
 
     private int readHexDigit(ParseState state) {
@@ -281,12 +357,12 @@ public final class GenericUriParser implements UriParser<GenericUri> {
             case '7' -> 7;
             case '8' -> 8;
             case '9' -> 9;
-            case 'A' -> 10;
-            case 'B' -> 11;
-            case 'C' -> 12;
-            case 'D' -> 13;
-            case 'E' -> 14;
-            case 'F' -> 15;
+            case 'A', 'a' -> 10;
+            case 'B', 'b' -> 11;
+            case 'C', 'c' -> 12;
+            case 'D', 'd' -> 13;
+            case 'E', 'e' -> 14;
+            case 'F', 'f' -> 15;
             default -> throw new UriParseException("not a hex digit");
         };
     }
@@ -311,12 +387,37 @@ public final class GenericUriParser implements UriParser<GenericUri> {
         return state.input.charAt(state.position++);
     }
 
+    private void readBuf(ParseState state) {
+        if (state.position >= state.input.length()) {
+            return;
+        }
+
+        state.buf.append((char) state.input.charAt(state.position++));
+    }
+
     private void expect(char ch, ParseState state) {
         if (peek(state) != ch) {
             throw new UriParseException("expected " + ch);
         }
 
         read(state);
+    }
+
+    private void expectBuf(char ch, ParseState state) {
+        if (peek(state) != ch) {
+            throw new UriParseException("expected " + ch);
+        }
+
+        state.buf.append((char) read(state));
+    }
+
+    private boolean matchBuf(char ch, ParseState state) {
+        if (peek(state) == ch) {
+            readBuf(state);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private boolean isAlpha(int ch) {
@@ -330,7 +431,8 @@ public final class GenericUriParser implements UriParser<GenericUri> {
 
     private boolean isHexDigit(int ch) {
         return isDigit(ch)
-            || (ch >= 'A' && ch <= 'F');
+            || (ch >= 'A' && ch <= 'F')
+            || (ch >= 'a' && ch <= 'f');
     }
 
     private boolean isPathChar(ParseState state) {
@@ -407,8 +509,13 @@ public final class GenericUriParser implements UriParser<GenericUri> {
 
     private record HierarchyPart(
         String userInfo,
-        String host,
+        Host host,
         Integer port,
         String path
+    ) {}
+
+    private record Host(
+        HostType type,
+        String value
     ) {}
 }
