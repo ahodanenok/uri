@@ -20,6 +20,7 @@ public final class GenericUriParser implements UriParser<GenericUri> {
             scheme,
             host != null ? host.type() : null,
             host != null ? host.value() : null,
+            hierarchyPart.port(),
             hierarchyPart.path());
     }
 
@@ -63,7 +64,17 @@ public final class GenericUriParser implements UriParser<GenericUri> {
 
                 Host host = readHost(state);
 
-                // port        = *DIGIT
+                // port = *DIGIT
+                String port;
+                if (peek(state) == ':') {
+                    expect(':', state);
+                    while (isDigit(peek(state))) {
+                        readBuf(state);
+                    }
+                    port = state.bufToString();
+                } else {
+                    port = null;
+                }
 
                 // path-abempty
                 while (peek(state) == '/') {
@@ -71,7 +82,7 @@ public final class GenericUriParser implements UriParser<GenericUri> {
                     readSegmentToBuffer(state);
                 }
 
-                return new HierarchyPart(null, host, null, state.bufToString());
+                return new HierarchyPart(null, host, port, state.bufToString());
             } else {
                 // path-absolute
                 readBuf(state);
@@ -510,7 +521,7 @@ public final class GenericUriParser implements UriParser<GenericUri> {
     private record HierarchyPart(
         String userInfo,
         Host host,
-        Integer port,
+        String port,
         String path
     ) {}
 

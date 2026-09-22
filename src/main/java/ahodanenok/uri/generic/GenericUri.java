@@ -7,6 +7,7 @@ public final class GenericUri implements Uri {
     private final String scheme;
     private final HostType hostType;
     private final String host;
+    private final String port;
     private final String path;
 
     // todo: how to create an uri from components with validation?
@@ -14,10 +15,12 @@ public final class GenericUri implements Uri {
             String scheme,
             HostType hostType,
             String host,
+            String port,
             String path) {
         this.scheme = scheme;
         this.hostType = hostType;
         this.host = host;
+        this.port = port;
         this.path = path;
     }
 
@@ -34,6 +37,11 @@ public final class GenericUri implements Uri {
     @Override
     public String getHost() {
         return host;
+    }
+
+    @Override
+    public String getPort() {
+        return port;
     }
 
     @Override

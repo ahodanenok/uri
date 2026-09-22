@@ -8,6 +8,8 @@ public interface Uri {
 
     String getHost();
 
+    String getPort();
+
     String getPath();
 
     public enum HostType {

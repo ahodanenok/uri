@@ -416,4 +416,59 @@ public class GenericUriParserTest {
         assertEquals("v1.fe80::a+en1", uri.getHost());
         assertEquals("/path", uri.getPath());
     }
+
+    @Test
+    public void testParse_EmptyPort() {
+        GenericUriParser parser = new GenericUriParser();
+        GenericUri uri = parser.parse("p://site:");
+        assertEquals("p", uri.getScheme());
+        assertEquals(HostType.REGISTERED_NAME, uri.getHostType());
+        assertEquals("site", uri.getHost());
+        assertEquals("", uri.getPort());
+        assertEquals("", uri.getPath());
+    }
+
+    @Test
+    public void testParse_EmptyPortWithPath() {
+        GenericUriParser parser = new GenericUriParser();
+        GenericUri uri = parser.parse("p://site:/data");
+        assertEquals("p", uri.getScheme());
+        assertEquals(HostType.REGISTERED_NAME, uri.getHostType());
+        assertEquals("site", uri.getHost());
+        assertEquals("", uri.getPort());
+        assertEquals("/data", uri.getPath());
+    }
+
+    @Test
+    public void testParse_Port() {
+        GenericUriParser parser = new GenericUriParser();
+        GenericUri uri = parser.parse("p://site:123");
+        assertEquals("p", uri.getScheme());
+        assertEquals(HostType.REGISTERED_NAME, uri.getHostType());
+        assertEquals("site", uri.getHost());
+        assertEquals("123", uri.getPort());
+        assertEquals("", uri.getPath());
+    }
+
+    @Test
+    public void testParse_LongPort() {
+        GenericUriParser parser = new GenericUriParser();
+        GenericUri uri = parser.parse("p://site:9999999999999999999999999999999999999999999999");
+        assertEquals("p", uri.getScheme());
+        assertEquals(HostType.REGISTERED_NAME, uri.getHostType());
+        assertEquals("site", uri.getHost());
+        assertEquals("9999999999999999999999999999999999999999999999", uri.getPort());
+        assertEquals("", uri.getPath());
+    }
+
+    @Test
+    public void testParse_PortWithPath() {
+        GenericUriParser parser = new GenericUriParser();
+        GenericUri uri = parser.parse("p://site:123/data");
+        assertEquals("p", uri.getScheme());
+        assertEquals(HostType.REGISTERED_NAME, uri.getHostType());
+        assertEquals("site", uri.getHost());
+        assertEquals("123", uri.getPort());
+        assertEquals("/data", uri.getPath());
+    }
 }
