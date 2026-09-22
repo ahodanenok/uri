@@ -4,6 +4,8 @@ public interface Uri {
 
     String getScheme();
 
+    String getUserInfo();
+
     HostType getHostType();
 
     String getHost();

@@ -18,6 +18,7 @@ public final class GenericUriParser implements UriParser<GenericUri> {
 
         return new GenericUri(
             scheme,
+            hierarchyPart.userInfo(),
             host != null ? host.type() : null,
             host != null ? host.value() : null,
             hierarchyPart.port(),
@@ -60,7 +61,7 @@ public final class GenericUriParser implements UriParser<GenericUri> {
                 read(state); // skip /
                 read(state); // skip /
 
-                // userinfo    = *( unreserved / pct-encoded / sub-delims / ":" )
+                String userInfo = readUserInfo(state);
 
                 Host host = readHost(state);
 
@@ -82,7 +83,7 @@ public final class GenericUriParser implements UriParser<GenericUri> {
                     readSegmentToBuffer(state);
                 }
 
-                return new HierarchyPart(null, host, port, state.bufToString());
+                return new HierarchyPart(userInfo, host, port, state.bufToString());
             } else {
                 // path-absolute
                 readBuf(state);
@@ -109,6 +110,33 @@ public final class GenericUriParser implements UriParser<GenericUri> {
             // path-empty
             return new HierarchyPart(null, null, null, "");
         }
+    }
+
+    // userinfo    = *( unreserved / pct-encoded / sub-delims / ":" )
+    private String readUserInfo(ParseState state) {
+        state.mark();
+        String userInfo = null;
+        while (true) {
+            int ch = peek(state);
+            if (isUnreserved(ch)
+                    || isSubDelimiter(ch)
+                    || ch == ':') {
+                readBuf(state);
+            } else if (isPercentEncoded(state)) {
+                readPercentEncodedBuf(state);
+            } else if (ch == '@') {
+                expect('@', state);
+                userInfo = state.bufToString();
+                break;
+            } else {
+                break;
+            }
+        }
+        if (userInfo == null) {
+            state.rewind();
+        }
+
+        return userInfo;
     }
 
     // host = IP-literal / IPv4address / reg-name
@@ -275,7 +303,7 @@ public final class GenericUriParser implements UriParser<GenericUri> {
             if (isUnreserved(ch) || isSubDelimiter(ch)) {
                 readBuf(state);
             } else if (isPercentEncoded(state)) {
-                readPercentEncodedCharBuf(state);
+                readPercentEncodedBuf(state);
             } else {
                 break;
             }
@@ -334,14 +362,14 @@ public final class GenericUriParser implements UriParser<GenericUri> {
 
     private void readPathCharBuf(ParseState state) {
         if (peek(state) == '%') {
-            readPercentEncodedCharBuf(state);
+            readPercentEncodedBuf(state);
         } else {
             readBuf(state);
         }
     }
 
     // todo: utf8
-    private void readPercentEncodedCharBuf(ParseState state) {
+    private void readPercentEncodedBuf(ParseState state) {
         expect('%', state);
         int h1 = readHexDigit(state);
         if (h1 == -1) {
