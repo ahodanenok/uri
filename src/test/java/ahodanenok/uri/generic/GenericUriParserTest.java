@@ -8,14 +8,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class GenericUriParserTest {
 
-    //@Test
+    @Test
     public void testParse() {
         GenericUriParser parser = new GenericUriParser();
         GenericUri uri = parser.parse("foo://example.com:8042/over/there?name=ferret#nose");
         assertEquals("foo", uri.getScheme());
         assertEquals(null, uri.getUserInfo());
-        assertEquals(null, uri.getHost());
-        assertEquals(null, uri.getPort());
+        assertEquals("example.com", uri.getHost());
+        assertEquals("8042", uri.getPort());
+        assertEquals("name=ferret", uri.getQuery());
     }
 
     @Test
@@ -27,6 +28,7 @@ public class GenericUriParserTest {
         assertEquals(null, uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -38,6 +40,7 @@ public class GenericUriParserTest {
         assertEquals(null, uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("abc", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -49,6 +52,7 @@ public class GenericUriParserTest {
         assertEquals(null, uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("x/12/abc", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -60,6 +64,7 @@ public class GenericUriParserTest {
         assertEquals(null, uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("a//c", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -71,6 +76,7 @@ public class GenericUriParserTest {
         assertEquals(null, uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("a///b////", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -82,6 +88,7 @@ public class GenericUriParserTest {
         assertEquals(null, uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("/", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -93,6 +100,7 @@ public class GenericUriParserTest {
         assertEquals(null, uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("/foo", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -104,6 +112,7 @@ public class GenericUriParserTest {
         assertEquals(null, uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("/foo/bar/123", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -115,6 +124,7 @@ public class GenericUriParserTest {
         assertEquals(null, uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("/foo///bar", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -127,6 +137,7 @@ public class GenericUriParserTest {
         assertEquals("192.168.1.1", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -139,6 +150,7 @@ public class GenericUriParserTest {
         assertEquals("192.168.1.1", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("/", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -151,6 +163,7 @@ public class GenericUriParserTest {
         assertEquals("192.168.1.1", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("/test", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -163,6 +176,7 @@ public class GenericUriParserTest {
         assertEquals("0.0.0.0", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -175,6 +189,7 @@ public class GenericUriParserTest {
         assertEquals("255.255.255.255", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -187,6 +202,7 @@ public class GenericUriParserTest {
         assertEquals("8.8.8.8", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -199,6 +215,7 @@ public class GenericUriParserTest {
         assertEquals("127.0.0.1", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -211,6 +228,7 @@ public class GenericUriParserTest {
         assertEquals("example.com", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -223,6 +241,7 @@ public class GenericUriParserTest {
         assertEquals("", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -235,6 +254,7 @@ public class GenericUriParserTest {
         assertEquals("", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("/path", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -247,6 +267,7 @@ public class GenericUriParserTest {
         assertEquals("a", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("/b", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -259,6 +280,7 @@ public class GenericUriParserTest {
         assertEquals("...", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -271,6 +293,7 @@ public class GenericUriParserTest {
         assertEquals("example.com", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("/", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -283,6 +306,7 @@ public class GenericUriParserTest {
         assertEquals("example.com", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("/data", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -295,6 +319,7 @@ public class GenericUriParserTest {
         assertEquals("www.sub.domain.example.com", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -307,6 +332,7 @@ public class GenericUriParserTest {
         assertEquals("a.b.c.d.e.f.g.h.i.j", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -319,6 +345,7 @@ public class GenericUriParserTest {
         assertEquals("localhost", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -331,6 +358,7 @@ public class GenericUriParserTest {
         assertEquals("1234567890.xyz", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -343,6 +371,7 @@ public class GenericUriParserTest {
         assertEquals("ab-cd_ef.com", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -355,6 +384,7 @@ public class GenericUriParserTest {
         assertEquals("~my~site~.org", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -367,6 +397,7 @@ public class GenericUriParserTest {
         assertEquals("hello$world.net", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -379,6 +410,7 @@ public class GenericUriParserTest {
         assertEquals("shop&go.store", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -391,6 +423,7 @@ public class GenericUriParserTest {
         assertEquals("user*name.biz", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -403,6 +436,7 @@ public class GenericUriParserTest {
         assertEquals("price+list.com", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -415,6 +449,7 @@ public class GenericUriParserTest {
         assertEquals("a,b,c.com", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -427,6 +462,7 @@ public class GenericUriParserTest {
         assertEquals("a;b;c.org", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -439,6 +475,7 @@ public class GenericUriParserTest {
         assertEquals("equal=name.com", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -451,6 +488,7 @@ public class GenericUriParserTest {
         assertEquals("site n?/ame.com", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     // @Test
@@ -473,6 +511,7 @@ public class GenericUriParserTest {
         assertEquals("xn--d1acufc.xn--e1aybc", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -485,6 +524,7 @@ public class GenericUriParserTest {
         assertEquals("FEDC:BA98:7654:3210:FEDC:BA98:7654:3210", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -497,6 +537,7 @@ public class GenericUriParserTest {
         assertEquals("0:0:0:0:0:0:0:0", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -509,6 +550,7 @@ public class GenericUriParserTest {
         assertEquals("v1.fe80::a+en1", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("/path", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -521,6 +563,7 @@ public class GenericUriParserTest {
         assertEquals("site", uri.getHost());
         assertEquals("", uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -533,6 +576,7 @@ public class GenericUriParserTest {
         assertEquals("site", uri.getHost());
         assertEquals("", uri.getPort());
         assertEquals("/data", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -545,6 +589,7 @@ public class GenericUriParserTest {
         assertEquals("site", uri.getHost());
         assertEquals("123", uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -557,6 +602,7 @@ public class GenericUriParserTest {
         assertEquals("site", uri.getHost());
         assertEquals("9999999999999999999999999999999999999999999999", uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -569,6 +615,7 @@ public class GenericUriParserTest {
         assertEquals("site", uri.getHost());
         assertEquals("123", uri.getPort());
         assertEquals("/data", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -581,6 +628,7 @@ public class GenericUriParserTest {
         assertEquals("localhost", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
     }
 
     @Test
@@ -593,5 +641,45 @@ public class GenericUriParserTest {
         assertEquals("localhost", uri.getHost());
         assertEquals(null, uri.getPort());
         assertEquals("", uri.getPath());
+        assertEquals(null, uri.getQuery());
+    }
+
+    @Test
+    public void testParse_Query_Empty() {
+        GenericUriParser parser = new GenericUriParser();
+        GenericUri uri = parser.parse("q://foo?");
+        assertEquals("q", uri.getScheme());
+        assertEquals(HostType.REGISTERED_NAME, uri.getHostType());
+        assertEquals(null, uri.getUserInfo());
+        assertEquals("foo", uri.getHost());
+        assertEquals(null, uri.getPort());
+        assertEquals("", uri.getPath());
+        assertEquals("", uri.getQuery());
+    }
+
+    @Test
+    public void testParse_Query_Slash() {
+        GenericUriParser parser = new GenericUriParser();
+        GenericUri uri = parser.parse("q://foo?redirect=/user/profile");
+        assertEquals("q", uri.getScheme());
+        assertEquals(HostType.REGISTERED_NAME, uri.getHostType());
+        assertEquals(null, uri.getUserInfo());
+        assertEquals("foo", uri.getHost());
+        assertEquals(null, uri.getPort());
+        assertEquals("", uri.getPath());
+        assertEquals("redirect=/user/profile", uri.getQuery());
+    }
+
+    @Test
+    public void testParse_Query_Question() {
+        GenericUriParser parser = new GenericUriParser();
+        GenericUri uri = parser.parse("q://foo?what?where?who?");
+        assertEquals("q", uri.getScheme());
+        assertEquals(HostType.REGISTERED_NAME, uri.getHostType());
+        assertEquals(null, uri.getUserInfo());
+        assertEquals("foo", uri.getHost());
+        assertEquals(null, uri.getPort());
+        assertEquals("", uri.getPath());
+        assertEquals("what?where?who?", uri.getQuery());
     }
 }

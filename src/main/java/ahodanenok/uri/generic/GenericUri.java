@@ -10,6 +10,7 @@ public final class GenericUri implements Uri {
     private final String host;
     private final String port;
     private final String path;
+    private final String query;
 
     // todo: how to create an uri from components with validation?
     public GenericUri(
@@ -18,13 +19,15 @@ public final class GenericUri implements Uri {
             HostType hostType,
             String host,
             String port,
-            String path) {
+            String path,
+            String query) {
         this.scheme = scheme;
         this.userInfo = userInfo;
         this.hostType = hostType;
         this.host = host;
         this.port = port;
         this.path = path;
+        this.query = query;
     }
 
     @Override
@@ -55,6 +58,11 @@ public final class GenericUri implements Uri {
     @Override
     public String getPath() {
         return path;
+    }
+
+    @Override
+    public String getQuery() {
+        return query;
     }
 
     // todo: a method here for creating string representation or a separate class?

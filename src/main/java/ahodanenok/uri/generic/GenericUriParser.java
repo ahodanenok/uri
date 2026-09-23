@@ -14,7 +14,7 @@ public final class GenericUriParser implements UriParser<GenericUri> {
         expect(':', state);
         HierarchyPart hierarchyPart = readHierarchyPart(state);
         Host host = hierarchyPart.host();
-
+        String query = readQuery(state);
 
         return new GenericUri(
             scheme,
@@ -22,7 +22,8 @@ public final class GenericUriParser implements UriParser<GenericUri> {
             host != null ? host.type() : null,
             host != null ? host.value() : null,
             hierarchyPart.port(),
-            hierarchyPart.path());
+            hierarchyPart.path(),
+            query);
     }
 
     // scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
@@ -352,6 +353,29 @@ public final class GenericUriParser implements UriParser<GenericUri> {
         }
 
         return false;
+    }
+
+    // query = *( pchar / "/" / "?" )
+    private String readQuery(ParseState state) {
+        if (peek(state) != '?') {
+            return null;
+        }
+
+        expect('?', state);
+        while (true) {
+            if (isPathChar(state)) {
+                readPathCharBuf(state);
+            } else {
+                int ch = peek(state);
+                if (ch == '/' || ch == '?') {
+                    readBuf(state);
+                } else {
+                    break;
+                }
+            }
+        }
+
+        return state.bufToString();
     }
 
     private void readSegmentToBuffer(ParseState state) {

@@ -14,6 +14,8 @@ public interface Uri {
 
     String getPath();
 
+    String getQuery();
+
     public enum HostType {
         IP_4,
         IP_6,
