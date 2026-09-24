@@ -16,6 +16,8 @@ public interface Uri {
 
     String getQuery();
 
+    String getFragment();
+
     public enum HostType {
         IP_4,
         IP_6,
