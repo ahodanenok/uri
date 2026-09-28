@@ -2,7 +2,14 @@ package ahodanenok.uri;
 
 public class UriParseException extends RuntimeException {
 
-    public UriParseException(String msg) {
-        super(msg);
+    private final int position;
+
+    public UriParseException(int position, String msg) {
+        super("position " + position + ": " + msg);
+        this.position = position;
+    }
+
+    public int getPosition() {
+        return position;
     }
 }

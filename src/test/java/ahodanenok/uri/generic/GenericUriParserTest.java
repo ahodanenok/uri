@@ -2,9 +2,11 @@ package ahodanenok.uri.generic;
 
 import org.junit.jupiter.api.Test;
 
+import ahodanenok.uri.UriParseException;
 import ahodanenok.uri.Uri.HostType;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class GenericUriParserTest {
 
@@ -18,6 +20,15 @@ public class GenericUriParserTest {
         assertEquals("8042", uri.getPort());
         assertEquals("name=ferret", uri.getQuery());
         assertEquals("nose", uri.getFragment());
+    }
+
+    @Test
+    public void testParse_NoScheme() {
+        GenericUriParser parser = new GenericUriParser();
+        UriParseException e = assertThrows(
+            UriParseException.class, () -> parser.parse("foo/bar"));
+        assertEquals("position 0: no scheme present", e.getMessage());
+        assertEquals(0, e.getPosition());
     }
 
     @Test
@@ -553,6 +564,16 @@ public class GenericUriParserTest {
         assertEquals(null, uri.getFragment());
     }
 
+
+    @Test
+    public void testParse_IPv6_Illegal() {
+        GenericUriParser parser = new GenericUriParser();
+        UriParseException e = assertThrows(
+            UriParseException.class, () -> parser.parse("ip://[A:B:C:D]"));
+        assertEquals("position 6: illegal IPv6 address", e.getMessage());
+        assertEquals(6, e.getPosition());
+    }
+
     @Test
     public void testParse_IPv6_Full() {
         GenericUriParser parser = new GenericUriParser();
@@ -593,6 +614,16 @@ public class GenericUriParserTest {
         assertEquals("/path", uri.getPath());
         assertEquals(null, uri.getQuery());
         assertEquals(null, uri.getFragment());
+    }
+
+    @Test
+    public void testParse_IPvFuture_Illegal() {
+        GenericUriParser parser = new GenericUriParser();
+        UriParseException e = assertThrows(
+            UriParseException.class, () -> parser.parse("ip://[v1.#123]"));
+                    e.printStackTrace();
+        assertEquals("position 6: illegal IPvFuture address", e.getMessage());
+        assertEquals(6, e.getPosition());
     }
 
     @Test
@@ -763,10 +794,12 @@ public class GenericUriParserTest {
         assertEquals("/user/profile", uri.getFragment());
     }
 
-    // todo
-    // @Test
-    // public void testParse_Fragment_Hash() {
-    //     GenericUriParser parser = new GenericUriParser();
-    //     GenericUri uri = parser.parse("f://bar#a#b#c");
-    // }
+    @Test
+    public void testParse_Fragment_Hash() {
+        GenericUriParser parser = new GenericUriParser();
+        UriParseException e = assertThrows(
+            UriParseException.class, () -> parser.parse("f://bar#a#b#c"));
+        assertEquals("position 9: unexpected character '#' at the end", e.getMessage());
+        assertEquals(9, e.getPosition());
+    }
 }

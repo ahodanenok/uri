@@ -6,17 +6,27 @@ import ahodanenok.uri.UriParseException;
 
 public final class GenericUriParser implements UriParser<GenericUri> {
 
-
     @Override
     public GenericUri parse(String uri) {
         ParseState state = new ParseState(uri);
+
+        state.mark();
         String scheme = readScheme(state);
-        expect(':', state);
+        if (scheme == null) {
+            state.rewind();
+            throw new UriParseException(state.position, "no scheme present");
+        }
+
         HierarchyPart hierarchyPart = readHierarchyPart(state);
         Host host = hierarchyPart.host();
         String query = readQuery(state);
         String fragment = readFragment(state);
-        // todo: check no symbols left
+
+        if (peek(state) != -1) {
+            throw new UriParseException(
+                state.position, "unexpected character '%s' at the end"
+                    .formatted((char) peek(state)));
+        }
 
         return new GenericUri(
             scheme,
@@ -32,24 +42,33 @@ public final class GenericUriParser implements UriParser<GenericUri> {
     // scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
     private String readScheme(ParseState state) {
         if (peek(state) == -1) {
-            throw new UriParseException("eof");
+            return null;
         }
 
         String scheme = "";
         int ch = read(state);
         if (!isAlpha(ch)) {
-            throw new UriParseException("not alpha");
+            return null;
         }
         scheme += (char) ch;
 
         while ((ch = peek(state)) != -1 && ch != ':') {
             ch = read(state);
-            if (isAlpha(ch) || isDigit(ch) || ch == '+' || ch == '-' || ch == '.') {
+            if (isAlpha(ch)
+                    || isDigit(ch)
+                    || ch == '+'
+                    || ch == '-'
+                    || ch == '.') {
                 scheme += (char) ch;
             } else {
-                throw new UriParseException("unexpected char");
+                return null;
             }
         }
+
+        if (peek(state) != ':') {
+            return null;
+        }
+        expect(':', state);
 
         return scheme;
     }
@@ -156,25 +175,32 @@ public final class GenericUriParser implements UriParser<GenericUri> {
             state.mark();
             Host ip6 = readIpAddressV6(state);
             if (ip6 != null) {
+                if (peek(state) != ']') {
+                    state.rewind();
+                    throw new UriParseException(state.position, "illegal IP literal");
+                }
                 expect(']', state);
                 return ip6;
             }
             ch = peek(state);
             if (ch != 'v' && ch != 'V') {
                 state.rewind();
-                throw new UriParseException("illegal IPv6 address");
+                throw new UriParseException(state.position, "illegal IPv6 address");
             }
 
-
-            Host ipv;
-            try {
-                ipv = readIpAddressFuture(state);
-            } catch (UriParseException e) {
-                state.rewind();
-                throw e;
+            state.mark();
+            Host ipv = readIpAddressFuture(state);
+            if (ipv != null) {
+                if (peek(state) != ']') {
+                    state.rewind();
+                    throw new UriParseException(state.position, "illegal IP literal");
+                }
+                expect(']', state);
+                return ipv;
             }
-            expect(']', state);
-            return ipv;
+
+            state.rewind();
+            throw new UriParseException(state.position, "illegal IPvFuture address");
         }
 
         state.mark();
@@ -196,20 +222,21 @@ public final class GenericUriParser implements UriParser<GenericUri> {
         if (ch == 'v' || ch == 'V') {
             readBuf(state);
         } else {
-            throw new UriParseException("illegal IPvFuture address");
+            return null;
         }
-
-        if (!isHexDigit(peek(state))) {
-            throw new UriParseException("illegal IPvFuture address");
+        if (isHexDigit(peek(state))) {
+            readBuf(state);
+        } else {
+            return null;
         }
-        readBuf(state);
         expectBuf('.', state);
 
         ch = peek(state);
-        if (!isUnreserved(ch) && !isSubDelimiter(ch) && ch != ':') {
-            throw new UriParseException("illegal IPvFuture address");
+        if (isUnreserved(ch) || isSubDelimiter(ch) || ch == ':') {
+            readBuf(state);
+        } else {
+            return null;
         }
-        readBuf(state);
         while (true) {
             ch = peek(state);
             if (isUnreserved(ch) || isSubDelimiter(ch) || ch == ':') {
@@ -435,7 +462,8 @@ public final class GenericUriParser implements UriParser<GenericUri> {
     }
 
     private int readHexDigit(ParseState state) {
-        return switch (read(state)) {
+        int ch = read(state);
+        return switch (ch) {
             case '0' -> 0;
             case '1' -> 1;
             case '2' -> 2;
@@ -452,7 +480,8 @@ public final class GenericUriParser implements UriParser<GenericUri> {
             case 'D', 'd' -> 13;
             case 'E', 'e' -> 14;
             case 'F', 'f' -> 15;
-            default -> throw new UriParseException("not a hex digit");
+            default -> throw new UriParseException(
+                state.position, "expected a hex digit, got '%s'".formatted((char) ch));
         };
     }
 
@@ -485,16 +514,30 @@ public final class GenericUriParser implements UriParser<GenericUri> {
     }
 
     private void expect(char ch, ParseState state) {
-        if (peek(state) != ch) {
-            throw new UriParseException("expected " + ch);
+        int nextCh = peek(state);
+        if (ch != nextCh) {
+            if (nextCh == -1) {
+                throw new UriParseException(
+                    state.position, "expected '%s', but no characters left".formatted((char) ch));
+            } else {
+                throw new UriParseException(
+                    state.position, "expected '%s', got '%s'".formatted((char) ch, (char) nextCh));
+            }
         }
 
         read(state);
     }
 
     private void expectBuf(char ch, ParseState state) {
-        if (peek(state) != ch) {
-            throw new UriParseException("expected " + ch);
+        int nextCh = peek(state);
+        if (ch != nextCh) {
+            if (nextCh == -1) {
+                throw new UriParseException(
+                    state.position, "expected '%s', but no characters left".formatted((char) ch));
+            } else {
+                throw new UriParseException(
+                    state.position, "expected '%s', got '%s'".formatted((char) ch, (char) nextCh));
+            }
         }
 
         state.buf.append((char) read(state));
