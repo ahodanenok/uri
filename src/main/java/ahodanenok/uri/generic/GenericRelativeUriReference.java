@@ -2,10 +2,10 @@ package ahodanenok.uri.generic;
 
 import ahodanenok.uri.HostType;
 import ahodanenok.uri.Uri;
+import ahodanenok.uri.UriReference;
 
-public final class GenericUri implements Uri<GenericUri> {
+final class GenericRelativeUriReference implements UriReference<GenericUri> {
 
-    private final String scheme;
     private final String userInfo;
     private final HostType hostType;
     private final String host;
@@ -14,8 +14,7 @@ public final class GenericUri implements Uri<GenericUri> {
     private final String query;
     private final String fragment;
 
-    public GenericUri(
-            String scheme,
+    public GenericRelativeUriReference(
             String userInfo,
             HostType hostType,
             String host,
@@ -23,7 +22,6 @@ public final class GenericUri implements Uri<GenericUri> {
             String path,
             String query,
             String fragment) {
-        this.scheme = scheme;
         this.userInfo = userInfo;
         this.hostType = hostType;
         this.host = host;
@@ -33,51 +31,40 @@ public final class GenericUri implements Uri<GenericUri> {
         this.fragment = fragment;
     }
 
-    @Override
     public String getScheme() {
-        return scheme;
+        return null;
     }
 
-    @Override
     public String getUserInfo() {
         return userInfo;
     }
 
-    @Override
     public HostType getHostType() {
         return hostType;
     }
 
-    @Override
     public String getHost() {
         return host;
     }
 
-    @Override
     public String getPort() {
         return port;
     }
 
-    @Override
     public String getPath() {
         return path;
     }
 
-    @Override
     public String getQuery() {
         return query;
     }
 
-    @Override
     public String getFragment() {
         return fragment;
     }
 
     @Override
-    public GenericUri resolve(GenericUri __) {
-        // todo: check ok
-        return this;
+    public GenericUri resolve(GenericUri uri) {
+        return uri; // todo
     }
-
-    // todo: a method here for creating string representation or a separate class?
 }

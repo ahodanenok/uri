@@ -1,6 +1,6 @@
 package ahodanenok.uri;
 
-public interface Uri<T extends Uri> extends UriReference<T> {
+public interface UriReference<T extends Uri> {
 
     String getScheme();
 
@@ -17,4 +17,6 @@ public interface Uri<T extends Uri> extends UriReference<T> {
     String getQuery();
 
     String getFragment();
+
+    T resolve(T baseUri);
 }

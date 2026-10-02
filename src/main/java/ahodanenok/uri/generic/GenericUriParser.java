@@ -1,14 +1,15 @@
 package ahodanenok.uri.generic;
 
-import ahodanenok.uri.Uri.HostType;
+import ahodanenok.uri.HostType;
 import ahodanenok.uri.UriParser;
 import ahodanenok.uri.UriParseException;
+import ahodanenok.uri.UriReference;
 
 public final class GenericUriParser implements UriParser<GenericUri> {
 
     @Override
-    public GenericUri parse(String uri) {
-        ParseState state = new ParseState(uri);
+    public GenericUri parse(String str) {
+        ParseState state = new ParseState(str);
 
         state.mark();
         String scheme = readScheme(state);
@@ -37,6 +38,114 @@ public final class GenericUriParser implements UriParser<GenericUri> {
             hierarchyPart.path(),
             query,
             fragment);
+    }
+
+    @Override
+    public UriReference<GenericUri> parseReference(String str) {
+        ParseState state = new ParseState(str);
+
+        // URI-reference = URI / relative-ref
+        state.mark();
+        String scheme = readScheme(state);
+        if (scheme != null) {
+            HierarchyPart hierarchyPart = readHierarchyPart(state);
+            Host host = hierarchyPart.host();
+            String query = readQuery(state);
+            String fragment = readFragment(state);
+            if (peek(state) != -1) {
+                throw new UriParseException(
+                    state.position, "unexpected character '%s' at the end"
+                        .formatted((char) peek(state)));
+            }
+
+            return new GenericUri(
+                scheme,
+                hierarchyPart.userInfo(),
+                host != null ? host.type() : null,
+                host != null ? host.value() : null,
+                hierarchyPart.port(),
+                hierarchyPart.path(),
+                query,
+                fragment);
+        } else {
+            state.rewind();
+            // relative-ref  = relative-part [ "?" query ] [ "#" fragment ]
+            // relative-part = "//" authority path-abempty
+            //                 / path-absolute
+            //                 / path-noscheme
+            //                 / path-empty
+            String userInfo = null;
+            Host host = null;
+            String port = null;
+            String path;
+            if (peek(0, state) == '/') {
+                if (peek(1, state) == '/') {
+                    // authority   = [ userinfo "@" ] host [ ":" port ]
+                    read(state); // skip /
+                    read(state); // skip /
+
+                    userInfo = readUserInfo(state);
+
+                    host = readHost(state);
+
+                    // port = *DIGIT
+                    if (peek(state) == ':') {
+                        expect(':', state);
+                        while (isDigit(peek(state))) {
+                            readBuf(state);
+                        }
+                        port = state.bufToString();
+                    }
+
+                    // path-abempty
+                    while (peek(state) == '/') {
+                        readBuf(state);
+                        readSegmentToBuffer(state);
+                    }
+                    path = state.bufToString();
+                } else {
+                    // path-absolute
+                    readBuf(state);
+                    if (isPathChar(state)) {
+                        readSegmentToBuffer(state);
+                        while (peek(state) == '/') {
+                            readBuf(state);
+                            readSegmentToBuffer(state);
+                        }
+                    }
+                    path = state.bufToString();
+                }
+            } else if (isPathCharNoColon(state)) {
+                // path-noscheme
+                readSegmentToBuffer(state);
+                while (peek(state) == '/') {
+                    readBuf(state);
+                    readSegmentToBuffer(state);
+                }
+                path = state.bufToString();
+            } else {
+                // path-empty
+                path = "";
+            }
+
+            String query = readQuery(state);
+            String fragment = readFragment(state);
+            if (peek(state) != -1) {
+                throw new UriParseException(
+                    state.position, "unexpected character '%s' at the end"
+                        .formatted((char) peek(state)));
+            }
+
+            return new GenericRelativeUriReference(
+                userInfo,
+                host != null ? host.type() : null,
+                host != null ? host.value() : null,
+                port,
+                path,
+                query,
+                fragment
+            );
+        }
     }
 
     // scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
@@ -573,6 +682,14 @@ public final class GenericUriParser implements UriParser<GenericUri> {
             || isPercentEncoded(state)
             || isSubDelimiter(ch)
             || ch == ':'
+            || ch == '@';
+    }
+
+    private boolean isPathCharNoColon(ParseState state) {
+        int ch = peek(state);
+        return isUnreserved(ch)
+            || isPercentEncoded(state)
+            || isSubDelimiter(ch)
             || ch == '@';
     }
 

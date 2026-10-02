@@ -3,7 +3,7 @@ package ahodanenok.uri.generic;
 import org.junit.jupiter.api.Test;
 
 import ahodanenok.uri.UriParseException;
-import ahodanenok.uri.Uri.HostType;
+import ahodanenok.uri.HostType;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
